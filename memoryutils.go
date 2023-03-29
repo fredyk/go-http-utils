@@ -68,14 +68,14 @@ func getAllMemoryStats() (Memory, error) {
 		MSpanInuse:   float64(m.MSpanInuse) / 1024.0,
 		MSpanSys:     float64(m.MSpanSys) / 1024.0,
 	}
+	if ProcessHash == "" {
+		ProcessHash = fmt.Sprintf("%x", getRandomProcessHash4bytes())
+	}
+	stats.Id = ProcessHash
 	return stats, err
 }
 
 func ReadMemoryStats() (memoryStats Memory, err error) {
-	if ProcessHash == "" {
-		ProcessHash = fmt.Sprintf("%x", getRandomProcessHash4bytes())
-	}
-	memoryStats.Id = ProcessHash
 	file, err := os.Open("/proc/meminfo")
 	if err != nil {
 		return
