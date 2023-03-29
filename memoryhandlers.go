@@ -29,7 +29,7 @@ func init() {
 func getRandomProcessHash4bytes() string {
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	init := 0x10000000
-	return fmt.Sprintf("%x", init+rnd.Intn(0x10000000-1))
+	return fmt.Sprintf("%x", init+rnd.Intn(0xdfffffff))
 }
 
 func (h *HttpMemoryHandlerImpl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
