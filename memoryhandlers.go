@@ -23,7 +23,7 @@ type HttpMemoryHandlerImpl struct {
 var ProcessHash string
 
 func init() {
-	ProcessHash = fmt.Sprintf("%x", getRandomProcessHash4bytes())
+	ProcessHash = getRandomProcessHash4bytes()
 }
 
 func getRandomProcessHash4bytes() string {

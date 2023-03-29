@@ -69,7 +69,7 @@ func getAllMemoryStats() (Memory, error) {
 		MSpanSys:     float64(m.MSpanSys) / 1024.0,
 	}
 	if ProcessHash == "" {
-		ProcessHash = fmt.Sprintf("%x", getRandomProcessHash4bytes())
+		ProcessHash = getRandomProcessHash4bytes()
 	}
 	stats.Id = ProcessHash
 	return stats, err
