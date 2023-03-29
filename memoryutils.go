@@ -31,6 +31,7 @@ type SimplifiedRuntimeMemStats struct {
 }
 
 type Memory struct {
+	Id                 string                    `json:"id"`
 	MemTotal           int                       `json:"total"`
 	MemFree            int                       `json:"free"`
 	MemAvailable       int                       `json:"available"`
@@ -71,6 +72,7 @@ func getAllMemoryStats() (Memory, error) {
 }
 
 func ReadMemoryStats() (memoryStats Memory, err error) {
+	memoryStats.Id = ProcessHash
 	file, err := os.Open("/proc/meminfo")
 	if err != nil {
 		return
