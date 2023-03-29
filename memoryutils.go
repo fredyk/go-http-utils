@@ -72,6 +72,9 @@ func getAllMemoryStats() (Memory, error) {
 }
 
 func ReadMemoryStats() (memoryStats Memory, err error) {
+	if ProcessHash == "" {
+		ProcessHash = fmt.Sprintf("%x", getRandomProcessHash4bytes())
+	}
 	memoryStats.Id = ProcessHash
 	file, err := os.Open("/proc/meminfo")
 	if err != nil {
