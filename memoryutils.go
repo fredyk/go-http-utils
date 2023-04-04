@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type SimplifiedRuntimeMemStats struct {
@@ -186,23 +187,42 @@ func parseProcessList() (out []PsEntry, err error) {
 				}
 			}
 
-			// Read /proc/\d+/stat to get CPU usage at 14th field
-			stat, err := os.ReadFile("/proc/" + possiblePid + "/stat")
+			var initialUserJiffies int64
+			var secondUserJiffies int64
+			initialUserJiffies, err = getTotalJiffiesForProcess(err, possiblePid)
 			if err != nil {
 				return out, err
 			}
-			fields := bytes.Fields(stat)
-			if len(fields) < 14 {
-				return out, fmt.Errorf("error parsing stat: %w", err)
-			}
-			n, err := strconv.ParseInt(string(fields[13]), 10, 64)
+			time.Sleep(1 * time.Second)
+			secondUserJiffies, err = getTotalJiffiesForProcess(err, possiblePid)
 			if err != nil {
-				return out, fmt.Errorf("error parsing stat: %w", err)
+				return out, err
 			}
-			entry.CpuUsage = float64(n) / totalClockTicks * 100.0
+			entry.CpuUsage = float64(secondUserJiffies-initialUserJiffies) / totalClockTicks * 100.0
 
 			out = append(out, entry)
 		}
 	}
 	return
+}
+
+func getTotalJiffiesForProcess(err error, possiblePid string) (int64, error) {
+	// Read /proc/\d+/stat to get CPU usage at 14th field
+	stat, err := os.ReadFile("/proc/" + possiblePid + "/stat")
+	if err != nil {
+		return 0, err
+	}
+	fields := bytes.Fields(stat)
+	if len(fields) < 14 {
+		return 0, fmt.Errorf("error parsing stat: %w", err)
+	}
+	uTimeJiffies, err := strconv.ParseInt(string(fields[13]), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("error parsing stat: %w", err)
+	}
+	sTimeJiffies, err := strconv.ParseInt(string(fields[14]), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("error parsing stat: %w", err)
+	}
+	return uTimeJiffies + sTimeJiffies, nil
 }
