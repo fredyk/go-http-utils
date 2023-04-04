@@ -2,10 +2,12 @@ package httputils
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/goccy/go-json"
 	"github.com/mailru/easyjson/jwriter"
 	"os"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -36,6 +38,14 @@ type Memory struct {
 	MemFree            int                       `json:"free"`
 	MemAvailable       int                       `json:"available"`
 	RuntimeMemoryStats SimplifiedRuntimeMemStats `json:"runtimeMemoryStats"`
+}
+
+type PsEntry struct {
+	Pid    int    `json:"pid"`
+	User   string `json:"user"`
+	VmRss  int64  `json:"vmRss"`
+	VmSize int64  `json:"vmSize"`
+	Name   string `json:"name"`
 }
 
 func (m Memory) MarshalEasyJSON(w *jwriter.Writer) {
@@ -119,4 +129,53 @@ func toInt(raw string) int {
 		panic(err)
 	}
 	return res
+}
+
+var RegexPid = regexp.MustCompile(`^\d+$`)
+
+func parseProcessList() (out []PsEntry, err error) {
+	// List /proc/\d+
+	processes, err := os.ReadDir("/proc")
+	if err != nil {
+		return out, err
+	}
+	for _, process := range processes {
+		possiblePid := process.Name()
+		if RegexPid.MatchString(possiblePid) {
+			// Read /proc/\d+/status
+			status, err := os.ReadFile("/proc/" + possiblePid + "/status")
+			if err != nil {
+				return out, err
+			}
+			// Parse /proc/\d+/status
+			var entry PsEntry
+			entry.Pid, err = strconv.Atoi(possiblePid)
+			// read lines
+			lines := bytes.Split(status, []byte{'\n'})
+			for _, line := range lines {
+				// read fields
+				fields := bytes.Split(line, []byte{':'})
+				switch string(bytes.TrimSpace(fields[0])) {
+				case "VmRSS":
+					splt := bytes.Split(bytes.TrimSpace(fields[1]), []byte{' '})
+					n, err := strconv.Atoi(string(bytes.TrimSpace(splt[0])))
+					if err != nil {
+						return out, fmt.Errorf("error parsing VmRss: %w", err)
+					}
+					entry.VmRss = int64(n)
+				case "VmSize":
+					splt := bytes.Split(bytes.TrimSpace(fields[1]), []byte{' '})
+					n, err := strconv.Atoi(string(bytes.TrimSpace(splt[0])))
+					if err != nil {
+						return out, fmt.Errorf("error parsing VmSize: %w", err)
+					}
+					entry.VmSize = int64(n)
+				case "Name":
+					entry.Name = string(bytes.TrimSpace(fields[1]))
+				}
+			}
+			out = append(out, entry)
+		}
+	}
+	return
 }

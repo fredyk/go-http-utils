@@ -56,3 +56,23 @@ func (h *HttpMemoryHandlerImpl) ServeHTTP(w http.ResponseWriter, r *http.Request
 func HttpMemoryHandler() http.Handler {
 	return &HttpMemoryHandlerImpl{}
 }
+
+func FiberPsHandler() fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		//// Try to get result of ps -aux
+		//cmd := exec.Command("ps", "-aux")
+		//out, err := cmd.Output()
+		//if err != nil {
+		//	return err
+		//}
+		//return ctx.SendString(string(out))
+		var out []PsEntry
+		var err error
+		out, err = parseProcessList()
+		if err != nil {
+			return err
+		}
+		return ctx.JSON(out)
+
+	}
+}
