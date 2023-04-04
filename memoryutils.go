@@ -45,8 +45,8 @@ type Memory struct {
 type PsEntry struct {
 	Pid      int     `json:"pid"`
 	User     string  `json:"user"`
-	VmRss    int64   `json:"vmRss"`
-	VmSize   int64   `json:"vmSize"`
+	VmRss    string  `json:"vmRss"`
+	VmSize   string  `json:"vmSize"`
 	Name     string  `json:"name"`
 	CpuUsage float64 `json:"cpuUsage"`
 }
@@ -169,19 +169,9 @@ func parseProcessList() (out []PsEntry, err error) {
 				fields := bytes.Split(line, []byte{':'})
 				switch string(bytes.TrimSpace(fields[0])) {
 				case "VmRSS":
-					splt := bytes.Split(bytes.TrimSpace(fields[1]), []byte{' '})
-					n, err := strconv.Atoi(string(bytes.TrimSpace(splt[0])))
-					if err != nil {
-						return out, fmt.Errorf("error parsing VmRss: %w", err)
-					}
-					entry.VmRss = int64(n)
+					entry.VmRss = string(bytes.TrimSpace(fields[1]))
 				case "VmSize":
-					splt := bytes.Split(bytes.TrimSpace(fields[1]), []byte{' '})
-					n, err := strconv.Atoi(string(bytes.TrimSpace(splt[0])))
-					if err != nil {
-						return out, fmt.Errorf("error parsing VmSize: %w", err)
-					}
-					entry.VmSize = int64(n)
+					entry.VmSize = string(bytes.TrimSpace(fields[1]))
 				case "Name":
 					entry.Name = string(bytes.TrimSpace(fields[1]))
 				}
