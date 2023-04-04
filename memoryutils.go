@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/goccy/go-json"
 	"github.com/mailru/easyjson/jwriter"
+	"github.com/tklauser/go-sysconf"
 	"os"
 	"regexp"
 	"runtime"
@@ -135,26 +136,14 @@ func toInt(raw string) int {
 var RegexPid = regexp.MustCompile(`^\d+$`)
 
 func parseProcessList() (out []PsEntry, err error) {
-	// First sum all clock ticks from /proc/stat
 	var totalClockTicks float64
-	procStat, err := os.ReadFile("/proc/stat")
-	if err != nil {
-		return out, err
+	// Get sysconf _SC_CLK_TCK
+	// get clock ticks, this will return the same as C.sysconf(C._SC_CLK_TCK)
+	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
+	if err == nil {
+		fmt.Printf("SC_CLK_TCK: %v\n", clktck)
 	}
-	lines := bytes.Split(procStat, []byte{'\n'})
-	for _, line := range lines {
-		if bytes.HasPrefix(line, []byte("cpu")) {
-			fields := bytes.Fields(line)
-			for _, field := range fields[1:] {
-				n, err := strconv.ParseInt(string(field), 10, 64)
-				if err != nil {
-					return out, err
-				}
-				totalClockTicks += float64(n)
-			}
-		}
-		break
-	}
+	totalClockTicks = float64(clktck)
 
 	// List /proc/\d+
 	processes, err := os.ReadDir("/proc")
