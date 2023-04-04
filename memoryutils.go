@@ -41,11 +41,12 @@ type Memory struct {
 }
 
 type PsEntry struct {
-	Pid    int    `json:"pid"`
-	User   string `json:"user"`
-	VmRss  int64  `json:"vmRss"`
-	VmSize int64  `json:"vmSize"`
-	Name   string `json:"name"`
+	Pid      int     `json:"pid"`
+	User     string  `json:"user"`
+	VmRss    int64   `json:"vmRss"`
+	VmSize   int64   `json:"vmSize"`
+	Name     string  `json:"name"`
+	CpuUsage float64 `json:"cpuUsage"`
 }
 
 func (m Memory) MarshalEasyJSON(w *jwriter.Writer) {
@@ -134,6 +135,27 @@ func toInt(raw string) int {
 var RegexPid = regexp.MustCompile(`^\d+$`)
 
 func parseProcessList() (out []PsEntry, err error) {
+	// First sum all clock ticks from /proc/stat
+	var totalClockTicks float64
+	procStat, err := os.ReadFile("/proc/stat")
+	if err != nil {
+		return out, err
+	}
+	lines := bytes.Split(procStat, []byte{'\n'})
+	for _, line := range lines {
+		if bytes.HasPrefix(line, []byte("cpu")) {
+			fields := bytes.Fields(line)
+			for _, field := range fields[1:] {
+				n, err := strconv.ParseInt(string(field), 10, 64)
+				if err != nil {
+					return out, err
+				}
+				totalClockTicks += float64(n)
+			}
+		}
+		break
+	}
+
 	// List /proc/\d+
 	processes, err := os.ReadDir("/proc")
 	if err != nil {
@@ -174,6 +196,22 @@ func parseProcessList() (out []PsEntry, err error) {
 					entry.Name = string(bytes.TrimSpace(fields[1]))
 				}
 			}
+
+			// Read /proc/\d+/stat to get CPU usage at 14th field
+			stat, err := os.ReadFile("/proc/" + possiblePid + "/stat")
+			if err != nil {
+				return out, err
+			}
+			fields := bytes.Fields(stat)
+			if len(fields) < 14 {
+				return out, fmt.Errorf("error parsing stat: %w", err)
+			}
+			n, err := strconv.ParseInt(string(fields[13]), 10, 64)
+			if err != nil {
+				return out, fmt.Errorf("error parsing stat: %w", err)
+			}
+			entry.CpuUsage = float64(n) / totalClockTicks * 100.0
+
 			out = append(out, entry)
 		}
 	}
