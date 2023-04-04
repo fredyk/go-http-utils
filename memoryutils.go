@@ -40,6 +40,7 @@ type Memory struct {
 	MemFree            int                       `json:"free"`
 	MemAvailable       int                       `json:"available"`
 	RuntimeMemoryStats SimplifiedRuntimeMemStats `json:"runtimeMemoryStats"`
+	PsEntries          []PsEntry                 `json:"psEntries"`
 }
 
 type PsEntry struct {
@@ -85,6 +86,13 @@ func getAllMemoryStats() (Memory, error) {
 		ProcessHash = getRandomProcessHash4bytes()
 	}
 	stats.Id = ProcessHash
+	var psEntries []PsEntry
+	psEntries, err = parseProcessList()
+	if err != nil {
+		return stats, err
+	}
+	stats.PsEntries = psEntries
+
 	return stats, err
 }
 
