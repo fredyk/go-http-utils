@@ -186,7 +186,8 @@ func parseProcessList() (out []PsEntry, err error) {
 			time.Sleep(1 * time.Second)
 			secondUserJiffies, err = getTotalJiffiesForProcess(err, possiblePid)
 			if err != nil {
-				return out, err
+				// Ignore exited processes
+				secondUserJiffies = initialUserJiffies
 			}
 			entry.CpuUsage = float64(secondUserJiffies-initialUserJiffies) / totalClockTicks * 100.0
 
